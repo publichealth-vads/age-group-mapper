@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Age Group Mapper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF1F4; --surface:#FFFFFF; --ink:#18263A; --muted:#5B6878; --line:#D3DAE2;
+  --band:#E3E9EF; --hit:#0E7C86; --hit-ink:#FFFFFF; --marker:#B42318; --chip:#FFFFFF; --warn:#8A5A00; --warn-bg:#FFF4DB;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1720; --surface:#17212C; --ink:#E4EAF0; --muted:#98A5B3; --line:#2A3746;
+    --band:#223040; --hit:#2BB3BE; --hit-ink:#06222A; --marker:#FF6B5E; --chip:#17212C; --warn:#F2C46B; --warn-bg:#2E2513;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1720; --surface:#17212C; --ink:#E4EAF0; --muted:#98A5B3; --line:#2A3746;
+  --band:#223040; --hit:#2BB3BE; --hit-ink:#06222A; --marker:#FF6B5E; --chip:#17212C; --warn:#F2C46B; --warn-bg:#2E2513;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:16px;line-height:1.5;font-variant-numeric:tabular-nums}
+.wrap{max-width:980px;margin:0 auto;padding:24px 18px 48px}
+header h1{font-size:1.6rem;line-height:1.2;margin:0 0 6px;font-weight:700;letter-spacing:-.01em}
+header p{margin:0;color:var(--muted);max-width:68ch}
+
+.console{margin-top:20px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+.inputs{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px;font-weight:500}
+input,select{width:100%;font:inherit;font-size:1.25rem;padding:10px 12px;border:1px solid var(--line);
+  border-radius:8px;background:var(--bg);color:var(--ink)}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--hit);outline-offset:2px}
+.normal{margin-top:12px;color:var(--muted);font-size:.95rem;min-height:1.5em}
+.normal strong{color:var(--ink);font-weight:600}
+.err{color:var(--marker)}
+button{font:inherit;cursor:pointer;border-radius:8px}
+.btn{padding:11px 16px;border:1px solid var(--ink);background:var(--ink);color:var(--surface);font-weight:600;white-space:nowrap}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+
+.filters{margin-top:22px}
+.filters h2{font-size:1rem;margin:0 0 8px;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:6px 12px;font-size:.9rem;border-radius:999px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.tools{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.tools input{font-size:.95rem;padding:8px 10px;max-width:280px;background:var(--surface)}
+.count{color:var(--muted);font-size:.9rem;margin-left:auto}
+
+.list{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.scheme{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.row1{display:flex;gap:12px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+.name{font-weight:600;font-size:1.02rem}
+.ctx{font-size:.8rem;color:var(--muted)}
+.result{font-size:1.35rem;font-weight:700;color:var(--hit);white-space:nowrap}
+.result.none{color:var(--muted);font-weight:500;font-size:1rem}
+.ruler{position:relative;display:flex;height:30px;margin-top:10px;border-radius:5px;overflow:hidden;gap:2px}
+.seg{background:var(--band);flex:none;display:flex;align-items:center;justify-content:center;
+  font-size:.68rem;color:var(--muted);overflow:hidden;white-space:nowrap;min-width:0}
+.seg.on{background:var(--hit);color:var(--hit-ink);font-weight:600}
+.pin{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--marker);border-radius:2px;transform:translateX(-1px);pointer-events:none}
+.axis{position:relative;height:16px;font-size:.68rem;color:var(--muted)}
+.axis span{position:absolute;transform:translateX(-50%)}
+.axis span:first-child{transform:none}
+details{margin-top:8px}
+summary{cursor:pointer;color:var(--muted);font-size:.85rem}
+.bands{overflow-x:auto;margin-top:6px}
+table{border-collapse:collapse;width:100%;font-size:.85rem;min-width:420px}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500}
+tr.on td{color:var(--hit);font-weight:600}
+.note{margin-top:8px;font-size:.82rem;padding:6px 10px;border-radius:6px;background:var(--warn-bg);color:var(--warn)}
+.src{font-size:.8rem;color:var(--muted);margin-top:6px}
+.empty{padding:28px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:10px}
+footer{margin-top:28px;font-size:.82rem;color:var(--muted);max-width:75ch}
+footer p{margin:.4em 0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:var(--ink);color:var(--surface);padding:8px 14px;border-radius:8px;font-size:.9rem;opacity:0;transition:opacity .2s}
+.toast.show{opacity:1}
+.unitcheck{margin-top:6px;font-size:.85rem;color:var(--muted)}
+.unitcheck .bad{color:var(--warn);background:var(--warn-bg);padding:2px 6px;border-radius:4px}
+.unitcheck a{color:var(--hit)}
+.cites{margin-top:6px;font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.cites a{color:var(--hit);text-underline-offset:2px}
+.cites sup{font-weight:600}
+.overlap{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag{font-size:.8rem;padding:4px 10px;border-radius:999px;background:var(--band);color:var(--muted)}
+.tag.on{background:var(--hit);color:var(--hit-ink);font-weight:600}
+.refs{margin-top:28px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.refs h2{font-size:1.05rem;margin:0 0 4px}
+.refs-note{margin:0 0 10px;font-size:.85rem;color:var(--muted)}
+.refs ol{margin:0;padding-left:1.4em;font-size:.88rem;line-height:1.5}
+.refs li{margin:.35em 0;overflow-wrap:anywhere}
+.refs a{color:var(--hit)}
+td.code{font-size:.8rem;color:var(--muted)}
+
+
+/* Desktop app layout */
+.app{max-width:1360px;margin:0 auto;padding:20px 24px 48px}
+.topbar{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.topbar h1{font-size:1.75rem;line-height:1.15;margin:0 0 4px;font-weight:700;letter-spacing:-.01em}
+.topbar p{margin:0;color:var(--muted);max-width:75ch}
+.ver{font-size:.85rem;color:var(--muted);white-space:nowrap}
+.layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:24px;margin-top:20px;align-items:start}
+.sidebar{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.ctxpanel>summary{list-style:none;display:flex;justify-content:space-between;align-items:baseline;font-weight:600;min-height:32px;cursor:default}
+.ctxpanel>summary::-webkit-details-marker{display:none}
+.ctxsum{font-size:.8rem;color:var(--muted);font-weight:400}
+.ctxactions{display:flex;gap:14px;margin:2px 0 8px}
+button.link{background:none;border:0;padding:4px 0;color:var(--hit);font-size:.88rem;font-weight:600;min-height:32px}
+button.link:hover{text-decoration:underline}
+.ctxgroup{margin-top:10px}
+.ctxgroup-h{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;font-weight:600;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--line);margin-bottom:4px}
+.ctxgroup-h button.link{font-size:.78rem;min-height:24px}
+.ctxrow{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;font-size:.92rem}
+.ctxrow:hover{background:var(--bg)}
+.ctxrow input{width:18px;height:18px;margin:0;padding:0;accent-color:var(--hit)}
+.ctxrow .n{font-size:.78rem;color:var(--muted);min-width:1.5em;text-align:right}
+.ctxrow .only{visibility:hidden;font-size:.75rem;min-height:22px;padding:0 4px}
+.ctxrow:hover .only,.ctxrow:focus-within .only{visibility:visible}
+.sidetools{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.sidelabel{margin:0}
+.sidetools input[type=search]{font-size:16px;padding:8px 10px;background:var(--bg)}
+.listhead{margin-top:14px;display:flex;justify-content:flex-end}
+.list{margin-top:8px}
+@media (min-width:1180px){ .list:not(.compact){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px} }
+@media (min-width:1180px){ .list.compact{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px} }
+.refs>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:1.05rem;cursor:pointer;min-height:40px}
+.refs>summary::-webkit-details-marker{display:none}
+.refs>summary::after{content:"Show";font-size:.85rem;color:var(--hit);font-weight:600}
+.refs[open]>summary::after{content:"Hide"}
+.refcount{font-size:.85rem;color:var(--muted);font-weight:400;margin-left:8px;margin-right:auto}
+.refs[open] .refs-note{margin-top:6px}
+@media (max-width:860px){
+  .app{padding:14px 12px 40px}
+  .topbar{flex-direction:column;align-items:flex-start}
+  .topbar h1{font-size:1.4rem}
+  .layout{grid-template-columns:1fr;gap:12px;margin-top:12px}
+  .sidebar{position:static;max-height:none;padding:10px 12px}
+  .ctxpanel>summary{cursor:pointer;min-height:44px;align-items:center}
+  .ctxpanel>summary::after{content:"Show";font-size:.85rem;color:var(--hit);font-weight:600;margin-left:8px}
+  .ctxpanel[open]>summary::after{content:"Hide"}
+  .ctxsum{margin-left:auto}
+  .ctxrow{min-height:44px}
+  .ctxrow .only{visibility:visible}
+}
+
+
+/* Top input bar + collapsible context groups */
+.app>.console{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;margin-top:16px;padding:14px 18px;box-shadow:0 8px 14px -12px rgba(0,0,0,.4)}
+.app>.console .inputs{grid-template-columns:minmax(140px,220px) minmax(180px,260px) auto;justify-content:start}
+.layout{margin-top:16px}
+.sidebar{top:calc(var(--ch,140px) + 16px);max-height:calc(100vh - var(--ch,140px) - 32px)}
+.ctxhint{font-size:.78rem;color:var(--muted);margin:2px 0 6px}
+.ctxactions{flex-wrap:wrap;gap:4px 12px}
+.cg{border:1px solid var(--line);border-radius:8px;margin-top:8px;overflow:hidden}
+.cg-h{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:8px;padding:6px 8px;background:var(--bg)}
+.cg-h input{width:18px;height:18px;margin:0;padding:0;accent-color:var(--hit)}
+.cg-h .gname{font-weight:600;font-size:.9rem;cursor:pointer}
+.cg-h .gcount{font-size:.78rem;color:var(--muted)}
+.cg-h .caret{background:none;border:0;min-height:32px;min-width:32px;padding:0;color:var(--ink);font-size:1rem;line-height:1;display:inline-flex;align-items:center;justify-content:center;border-radius:6px}
+.cg-h .caret:hover{background:var(--surface)}
+.cg-h .caret span{display:inline-block;transition:transform .15s}
+.cg-h .caret[aria-expanded="false"] span{transform:rotate(-90deg)}
+.cg-body{padding:4px 4px 6px}
+.cg-body[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.cg-h .caret span{transition:none}}
+@media (max-width:860px){
+  .app>.console{margin-top:12px;padding:10px 12px;border-radius:0 0 10px 10px}
+  .app>.console .inputs{grid-template-columns:1fr 1fr}
+  .sidebar{top:auto;max-height:none}
+  .cg-h .caret{min-height:44px;min-width:44px}
+}
+
+
+/* Hierarchy tree */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{padding-left:18px;border-left:1px dashed var(--line);margin-left:13px}
+.t-row{display:grid;grid-template-columns:26px 1fr auto auto;align-items:center;gap:6px;padding:3px 4px;border-radius:6px}
+.t-row:hover{background:var(--bg)}
+.t-row label{display:flex;align-items:center;gap:8px;margin:0;font-size:.9rem;color:var(--ink);cursor:pointer;min-width:0}
+.t-row input{width:17px;height:17px;margin:0;padding:0;flex:none;accent-color:var(--hit)}
+.t-g{margin-top:8px}
+.t-g .t-name{font-weight:700}
+.t-c .t-name{font-weight:500}
+.t-s label{font-size:.84rem;color:var(--muted)}
+.t-s .t-name{white-space:normal;line-height:1.3}
+.t-n{font-size:.75rem;color:var(--muted)}
+.pm{width:24px;height:24px;min-height:24px;padding:0;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:.95rem;font-weight:700;line-height:1;display:inline-flex;align-items:center;justify-content:center;border-radius:5px}
+.pm:hover{border-color:var(--hit);color:var(--hit)}
+.pm-spacer{width:24px}
+.t-row .only{visibility:hidden;font-size:.75rem;min-height:22px;padding:0 4px}
+.t-row:hover .only,.t-row:focus-within .only{visibility:visible}
+@media (max-width:860px){ .pm{width:34px;height:34px} .t-row{grid-template-columns:36px 1fr auto auto;min-height:44px} .pm-spacer{width:34px} .t-row .only{visibility:visible} }
+
+
+/* Group category backgrounds */
+:root{
+  --g0-h:#DCEBF7; --g0-b:#F1F7FC; --g0-k:#1F5F99;
+  --g1-h:#DDF1EA; --g1-b:#F2FAF7; --g1-k:#1C7058;
+  --g2-h:#F7E9D7; --g2-b:#FCF6EE; --g2-k:#8A5415;
+  --g3-h:#E9E3F5; --g3-b:#F6F3FB; --g3-k:#5B4B9A;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --g0-h:#1C3247; --g0-b:#152433; --g0-k:#8CC2EE;
+    --g1-h:#183A31; --g1-b:#132B25; --g1-k:#83D3B8;
+    --g2-h:#3D2C18; --g2-b:#2C2114; --g2-k:#EAB97A;
+    --g3-h:#2E2742; --g3-b:#221D31; --g3-k:#BBAAE8;
+  }
+}
+:root[data-theme="dark"]{
+  --g0-h:#1C3247; --g0-b:#152433; --g0-k:#8CC2EE;
+  --g1-h:#183A31; --g1-b:#132B25; --g1-k:#83D3B8;
+  --g2-h:#3D2C18; --g2-b:#2C2114; --g2-k:#EAB97A;
+  --g3-h:#2E2742; --g3-b:#221D31; --g3-k:#BBAAE8;
+}
+.tree>.t-group{margin-top:8px}
+.t-group.g0{--gh:var(--g0-h);--gk:var(--g0-k)}
+.t-group.g1{--gh:var(--g1-h);--gk:var(--g1-k)}
+.t-group.g2{--gh:var(--g2-h);--gk:var(--g2-k)}
+.t-group.g3{--gh:var(--g3-h);--gk:var(--g3-k)}
+.tree>.t-group>.t-g{margin-top:0;background:var(--gh);padding:6px}
+.tree>.t-group>.t-g:hover{background:var(--gh)}
+.tree>.t-group>.t-g .t-name,.tree>.t-group>.t-g .t-n{color:var(--gk)}
+.tree>.t-group>.t-g .pm{border-color:color-mix(in srgb, var(--gk) 40%, transparent);color:var(--gk)}
+.tree>.t-group>.t-g input{accent-color:var(--gk)}
+.t-solo .t-name{color:var(--ink);font-weight:500}
+.t-solo label{font-size:.9rem}
+
+
+/* Export buttons */
+.exports{display:flex;gap:8px;flex-wrap:wrap;justify-self:end}
+.exports .btn{padding:10px 14px}
+@media (max-width:860px){ .app>.console .inputs .exports{grid-column:1/-1;justify-self:stretch} .exports .btn{flex:1 1 0;min-height:40px;padding:8px 10px} }
+/* Print: one clean results table */
+#printout{display:none}
+@media print{
+  @page{margin:14mm}
+  body{background:#fff;color:#000}
+  .app,.toast{display:none !important}
+  #printout{display:block;font-family:"IBM Plex Sans",Arial,sans-serif;font-size:10pt;color:#000}
+  #printout h1{font-size:15pt;margin:0 0 4pt}
+  #printout .meta{margin:0 0 8pt;color:#333}
+  #printout table{width:100%;border-collapse:collapse;min-width:0;font-size:9pt}
+  #printout th,#printout td{border:1px solid #999;padding:3pt 5pt;text-align:left;vertical-align:top}
+  #printout th{background:#e8e8e8}
+  #printout tr{break-inside:avoid}
+  #printout .src{font-size:8pt;color:#333;margin-top:8pt;overflow-wrap:anywhere}
+}
+
+/* Touch targets and iOS zoom guard */
+.chip,.btn,summary,.compact-toggle{min-height:44px}
+.chip{display:inline-flex;align-items:center}
+summary{display:flex;align-items:center}
+.tools input[type=search]{font-size:16px}
+.compact-toggle{display:inline-flex;align-items:center;gap:8px;font-size:.9rem;color:var(--ink);margin:0;cursor:pointer}
+.compact-toggle input{width:20px;height:20px;padding:0;margin:0}
+.cites a{display:inline-block;padding:4px 0}
+/* Compact view: name + mapped band only */
+.list.compact .scheme{padding:10px 14px}
+.list.compact .ruler,.list.compact .axis,.list.compact .overlap,.list.compact details,.list.compact .cites,.list.compact .note{display:none}
+.list.compact .row1{align-items:center}
+@media (max-width:620px){
+  .wrap{padding:14px 12px 40px}
+  header h1{font-size:1.3rem}
+  header p{font-size:.92rem}
+  .console{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;margin-top:14px;padding:10px 12px;border-radius:0 0 10px 10px;
+    box-shadow:0 6px 12px -8px rgba(0,0,0,.35)}
+  .inputs{grid-template-columns:1fr 1fr;gap:8px}
+  .inputs .btn{grid-column:1/-1;min-height:40px;padding:8px 12px}
+  label{font-size:.78rem;margin-bottom:2px}
+  input,select{font-size:1.1rem;padding:8px 10px;min-height:44px}
+  .normal{margin-top:6px;font-size:.82rem}
+  .unitcheck{font-size:.78rem;margin-top:2px}
+  .filters{margin-top:16px}
+  .chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;margin:0 -12px;padding-left:12px;padding-right:12px}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none}
+  .tools{gap:8px}
+  .tools input[type=search]{max-width:none;flex:1 1 100%}
+  .count{margin-left:0;width:100%}
+  .scheme{padding:12px}
+  .row1{flex-direction:column;align-items:flex-start;gap:4px}
+  .result{white-space:normal;font-size:1.2rem}
+  .seg{font-size:.72rem}
+  .axis{font-size:.75rem;height:18px}
+  table{font-size:.8rem;min-width:360px}
+  .refs{padding:14px 12px}
+  .refs ol{padding-left:1.2em;font-size:.84rem}
+  footer{font-size:.8rem}
+}
+
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div>
+      <h1>Age Group Mapper</h1>
+      <p>Map an exact age and unit, as captured in NNDSS (PHVS_AgeUnit_NND) or syndromic data, to every CDC and WHO reporting scheme.</p>
+    </div>
+    <span class="ver" id="ver"></span>
+  </header>
+
+    <section class="console" id="console" aria-label="Age input">
+      <div class="inputs">
+        <div>
+          <label for="age">Exact age</label>
+          <input id="age" type="number" inputmode="decimal" min="0" step="any" value="34" aria-describedby="normal">
+        </div>
+        <div>
+          <label for="unit">Age unit (UCUM)</label>
+          <select id="unit">
+            <option value="a" selected>Years (a)</option>
+            <option value="mo">Months (mo)</option>
+            <option value="wk">Weeks (wk)</option>
+            <option value="d">Days (d)</option>
+            <option value="h">Hours (h)</option>
+            <option value="min">Minutes (min)</option>
+            <option value="s">Seconds (s)</option>
+            <option value="UNK">Unknown (UNK)</option>
+            <option value="OTH">Other (OTH)</option>
+          </select>
+        </div>
+        <div class="exports" role="group" aria-label="Export mappings">
+          <button class="btn ghost" id="dlCsv" type="button">Download CSV</button>
+          <button class="btn ghost" id="dlXlsx" type="button">Download Excel</button>
+          <button class="btn ghost" id="doPrint" type="button">Print</button>
+        </div>
+      </div>
+      <div class="normal" id="normal" aria-live="polite"></div>
+      <div class="unitcheck" id="unitcheck"></div>
+    </section>
+
+  <div class="layout">
+    <aside class="sidebar" aria-label="Filters">
+      <details class="ctxpanel" id="ctxpanel" open>
+        <summary><span>Data context</span><span class="ctxsum" id="ctxsum"></span></summary>
+        <div class="ctxhint">Starts with the commonly used NNDSS, Syndromic (ESSENCE), Mortality and Immunization schemes. Tick more to add them; Defaults restores this set.</div>
+        <div class="ctxactions">
+          <button type="button" class="link" id="ctxDefault">Defaults</button>
+          <button type="button" class="link" id="ctxAll">Select all</button>
+          <button type="button" class="link" id="ctxExpand">Expand all</button>
+          <button type="button" class="link" id="ctxCollapse">Collapse all</button>
+          <button type="button" class="link" id="ctxNone">Clear</button>
+        </div>
+        <div id="ctxgroups"></div>
+      </details>
+      <div class="sidetools">
+        <label class="compact-toggle"><input type="checkbox" id="compact"> Compact view</label>
+      </div>
+    </aside>
+
+    <main>
+
+      <div class="listhead"><span class="count" id="count"></span></div>
+      <div class="list" id="list"></div>
+
+      <details class="refs" id="refs">
+        <summary><span>References</span><span class="refcount" id="refcount"></span></summary>
+        <p class="refs-note">Numbered sources cited on each scheme. Links open in a new tab. Accessed 2026-09-25.</p>
+        <ol id="reflist"></ol>
+      </details>
+
+      <footer>
+        <p><strong>Rules applied.</strong> Age is normalized to days (1 year = 365.25 d, 1 month = 30.4375 d). Bands are lower-bound inclusive and upper-bound exclusive, so "1–4 years" means at least 1 year and under 5 years. This matches completed-age reporting.</p>
+        <p>NNDSS transmits exact age and unit only. Age groups are derived downstream. Band definitions vary by report year. Verify flagged schemes against the current program documentation before production use.</p>
+      </footer>
+    </main>
+  </div>
+</div>
+<section id="printout" aria-hidden="true"></section>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const VERSION = "Crosswalk v1.3.8 (2026-09-25)";
+const Y = n => n * 365.25, M = n => n * 30.4375, D = n => n;
+const INF = Infinity;
+
+// Year bands from cut points: [0,1,5] -> <1, 1–4, ≥5
+function yb(cuts, openLabel){
+  return cuts.map((lo, i) => {
+    const hi = cuts[i+1];
+    let label;
+    if (hi === undefined) label = openLabel || `≥${lo}`;
+    else if (lo === 0 && hi === 1) label = "<1";
+    else label = `${lo}–${hi-1}`;
+    return {label, lo: Y(lo), hi: hi === undefined ? INF : Y(hi)};
+  });
+}
+
+// Reference library. Every URL here was located and checked during the v1.2.0 source review.
+const REFS = {
+  nndssTables: {cite:"Centers for Disease Control and Prevention. Nationally Notifiable Infectious Diseases and Conditions, United States: Annual Tables. Table 4, Annual reported cases of notifiable diseases and rates, by age group.", url:"https://www.cdc.gov/nndss/data-statistics/infectious-tables/index.html"},
+  nndssT4: {cite:"CDC WONDER. NNDSS Annual Tables 2022, Table 4 (accessible version).", url:"https://wonder.cdc.gov/nndss/static/2022/annual/2022-table4.html"},
+  vadsUnit: {cite:"CDC PHIN VADS. Value set PHVS_AgeUnit_UCUM, Age unit, OID 2.16.840.1.114222.4.11.878, version 2.", url:"https://phinvads.cdc.gov/vads/ViewValueSet.action?oid=2.16.840.1.114222.4.11.878"},
+  vadsUnitNND: {cite:"CDC PHIN VADS. Value set PHVS_AgeUnit_NND, Age Unit (NND), OID 2.16.840.1.114222.4.11.7452, version 1.", url:"https://phinvads.cdc.gov/vads/ViewValueSet.action?oid=2.16.840.1.114222.4.11.7452"},
+  vadsUnitSyS: {cite:"CDC PHIN VADS. Value set PHVS_AgeUnit_SyndromicSurveillance, OID 2.16.840.1.114222.4.11.3402, version 1.", url:"https://phinvads.cdc.gov/vads/ViewValueSet.action?oid=2.16.840.1.114222.4.11.3402"},
+  nssp: {cite:"CDC National Syndromic Surveillance Program. BioSense Platform Quick Start Guide for ESSENCE.", url:"https://www.cdc.gov/nssp/biosense/docs/BioSense-Platform-Quick-Start-Guide-for-ESSENCE.pdf"},
+  wonderUCD: {cite:"CDC WONDER. Underlying Cause of Death data documentation (single-year, 5-year, 10-year and infant age groups).", url:"https://wonder.cdc.gov/wonder/help/ucd.html"},
+  seerStd: {cite:"National Cancer Institute SEER. Standard Populations (19 age groups: 0, 1–4, 5–9 … 85+; 20 age groups to 90+).", url:"https://seer.cancer.gov/stdpopulations/"},
+  covidCS: {cite:"CDC. COVID-19 Case Surveillance Public Use Data (data.cdc.gov, vbim-akqf), field age_group.", url:"https://data.cdc.gov/Case-Surveillance/COVID-19-Case-Surveillance-Public-Use-Data/vbim-akqf/data"},
+  flusurv: {cite:"CDC FluView. Influenza Hospitalization Surveillance Network (FluSurv-NET), part of RESP-NET.", url:"https://www.cdc.gov/fluview/overview/influenza-hospitalization-surveillance.html"},
+  ilinet: {cite:"CDC FluView. U.S. Outpatient ILINet, Percentage of Visits for ILI by Age Group, 2025–2026 season.", url:"https://www.cdc.gov/flu/weekly/weeklyarchives2025-2026/data/iliage44.html"},
+  tb: {cite:"CDC. Reported Tuberculosis in the United States, 2024. Tuberculosis Cases and Percentages by Age Group: Reporting Areas.", url:"https://www.cdc.gov/tb-surveillance-report-2024/data/age-group-reporting-areas.html"},
+  sti: {cite:"CDC. Sexually Transmitted Infections Surveillance, 2023.", url:"https://npin.cdc.gov/publication/sexually-transmitted-infections-surveillance-2023"},
+  hiv: {cite:"CDC. National HIV Surveillance System technical notes: HIV diagnoses, deaths and prevalence.", url:"https://www.cdc.gov/hiv-data/nhss/hiv-diagnoses-deaths-prevalence.html"},
+  hiv2023: {cite:"CDC. HIV Surveillance Report slide set, 2023 data: HIV diagnoses by age (13–24 through ≥75).", url:"https://stacks.cdc.gov/view/cdc/177771/cdc_177771_DS1.pdf"},
+  nis: {cite:"CDC. About the National Immunization Surveys (NIS).", url:"https://www.cdc.gov/nis/about/index.html"},
+  measles: {cite:"CDC. Measles (Rubeola): cases and outbreaks.", url:"https://www.cdc.gov/measles/index.html"},
+  brfss: {cite:"CDC BRFSS. Summary Matrix of Calculated Variables (_AGE_G six-level imputed age; _AGEG5YR 5-year groups to 80+).", url:"https://cdc.gov/brfss/annual_data/2013/summary_matrix_2013_version5.html"},
+  fda: {cite:"U.S. Food and Drug Administration. Pediatric Medical Devices: pediatric subpopulations.", url:"https://www.fda.gov/MedicalDevices/ProductsandMedicalProcedures/ucm135104.htm"},
+  czaja: {cite:"Czaja CA, et al. FluSurv-NET analysis stratifying older adults as 65–74, 75–84 and ≥85 years (reported in Infectious Disease News, 2019).", url:"https://www.healio.com/news/infectious-disease/20190703/flurelated-hospitalization-rates-risk-for-death-increase-with-age-among-elderly"},
+  whoStd: {cite:"Ahmad OB, Boschi-Pinto C, Lopez AD, Murray CJL, Lozano R, Inoue M. Age standardization of rates: a new WHO standard. GPE Discussion Paper Series No. 31. Geneva: World Health Organization; 2001.", url:"https://cdn.who.int/media/docs/default-source/gho-documents/global-health-estimates/gpe_discussion_paper_series_paper31_2001_age_standardization_rates.pdf"},
+  seerWho: {cite:"National Cancer Institute SEER. World (WHO 2000–2025) Standard population table.", url:"https://seer.cancer.gov/stdpopulations/world.who.html"},
+  whoFlu: {cite:"World Health Organization. Global epidemiological surveillance standards for influenza. Geneva: WHO; 2013. ISBN 978 92 4 150660 1.", url:"https://www.who.int/publications/i/item/9789241506601"},
+  whoFluAges: {cite:"Summary of WHO influenza surveillance guidance on minimum age strata (Table 2), Influenza Other Respir Viruses / PMC.", url:"https://pmc.ncbi.nlm.nih.gov/articles/PMC8466892/table/Tab2"},
+  whoAdol: {cite:"World Health Organization, South-East Asia Region. Adolescent health: adolescents 10–19, youth 15–24, young people 10–24 years.", url:"https://who.int/southeastasia/health-topics/adolescent-health"},
+  whoAgeing: {cite:"World Health Organization. Ageing (health topic): people aged 60 years and older.", url:"https://www.who.int/health-topics/ageing"},
+  whoGHE: {cite:"World Health Organization. Global Health Observatory: Mortality and global health estimates (neonatal 0–27 days, infant, under-five indicators).", url:"https://www.who.int/data/gho/data/themes/topics/topic-details/GHO/gho-ghe-mortality-and-global-health-estimates"}
+};
+const REF_KEYS = Object.keys(REFS);
+const refNum = k => REF_KEYS.indexOf(k) + 1;
+
+const CONTEXTS = ["NNDSS","Syndromic (NSSP)","Mortality (NCHS)","Population / Census","Respiratory","TB","STI","HIV","Immunization","Measles","Survey (BRFSS)","Pediatric","Geriatric","WHO"];
+
+const ESSENCE_NOTE = "ESSENCE age-group options depend on site configuration. Confirm against your ESSENCE query options.";
+
+const SCHEMES = [
+  {id:"nndss-annual", name:"NNDSS annual summary tables (Table 4)", ctx:"NNDSS",
+   bands: yb([0,1,5,15,25,40,65], "≥65"), refs:["nndssTables","nndssT4"],
+   verify:"Bands confirmed for 2018–2022 tables. Pin the table year you display."},
+  {id:"nssp-default", name:"ESSENCE default age group", ctx:"Syndromic (NSSP)",
+   bands: yb([0,5,18,45,65], "65+"), refs:["nssp"], verify:ESSENCE_NOTE},
+  {id:"nssp-10yr", name:"ESSENCE ten-year age groups", ctx:"Syndromic (NSSP)",
+   bands: yb([0,10,20,30,40,50,60,70,80], "80+"), refs:["nssp"], verify:ESSENCE_NOTE},
+  {id:"nssp-nchs", name:"ESSENCE NCHS-style age groups (overdose/injury)", ctx:"Syndromic (NSSP)",
+   bands: yb([0,11,15,25,35,45,55,65,75,85], "85+"), refs:["nssp"], verify:ESSENCE_NOTE},
+  {id:"nchs-10yr", name:"NCHS mortality, ten-year age groups", ctx:"Mortality (NCHS)",
+   bands: yb([0,1,5,15,25,35,45,55,65,75,85], "≥85"), refs:["wonderUCD"]},
+  {id:"seer-19", name:"U.S. standard population, 19 age groups (2000 U.S. standard)", ctx:"Population / Census",
+   bands: yb([0,1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85], "≥85"), refs:["seerStd"]},
+  {id:"covid-cs", name:"COVID-19 case surveillance public-use data", ctx:"Respiratory",
+   bands: yb([0,10,20,30,40,50,60,70,80], "80+"), refs:["covidCS"]},
+  {id:"flusurv", name:"FluSurv-NET hospitalization rates", ctx:"Respiratory",
+   bands: yb([0,5,18,50,65], "≥65"), refs:["flusurv"],
+   verify:"FluView Interactive offers additional strata. Confirm the set shown on your display."},
+  {id:"ilinet", name:"ILINet outpatient ILI", ctx:"Respiratory",
+   bands: yb([0,5,25,50,65], "65+"), refs:["ilinet"]},
+  {id:"tb", name:"TB surveillance", ctx:"TB",
+   bands: yb([0,5,15,25,45,65], "≥65"), refs:["tb"]},
+  {id:"sti", name:"STI surveillance", ctx:"STI",
+   bands: yb([0,15,20,25,30,35,40,45,55,65], "≥65"), refs:["sti"],
+   verify:"Band cut points should be confirmed against the current STI Surveillance report tables."},
+  {id:"hiv", name:"HIV surveillance, persons aged ≥13 at diagnosis", ctx:"HIV",
+   bands: yb([13,25,35,45,55,65,75], "≥75"), refs:["hiv2023","hiv"],
+   gapNote:"Under 13 is reported separately as pediatric (perinatal) HIV."},
+  {id:"nis", name:"National Immunization Survey target ages", ctx:"Immunization",
+   bands:[
+     {label:"19–35 months (NIS-Child)", lo:M(19), hi:M(36)},
+     {label:"13–17 years (NIS-Teen)", lo:Y(13), hi:Y(18)},
+     {label:"18+ years (adult modules)", lo:Y(18), hi:INF}],
+   refs:["nis"], gapNote:"Ages outside these windows are not NIS survey target populations (NIS-Flu also covers 6 months–17 years)."},
+  {id:"measles", name:"Measles case counts (CDC web)", ctx:"Measles",
+   bands:[{label:"Under 5 years", lo:0, hi:Y(5)},{label:"5–19 years", lo:Y(5), hi:Y(20)},{label:"20+ years", lo:Y(20), hi:INF}],
+   refs:["measles"]},
+  {id:"brfss", name:"BRFSS _AGE_G six-level age", ctx:"Survey (BRFSS)",
+   bands: yb([18,25,35,45,55,65], "65+"), refs:["brfss"], gapNote:"BRFSS covers adults 18 and older only."},
+  {id:"peds", name:"FDA pediatric subpopulations", ctx:"Pediatric",
+   bands:[
+     {label:"Neonate (birth–28 days)", lo:D(0), hi:D(29)},
+     {label:"Infant (29 days–<2 years)", lo:D(29), hi:Y(2)},
+     {label:"Child (2–<12 years)", lo:Y(2), hi:Y(12)},
+     {label:"Adolescent (12–21 years)", lo:Y(12), hi:Y(22)}],
+   refs:["fda"], gapNote:"Ages 22 and older are adults and fall outside this scheme."},
+  {id:"ger-tiers", name:"Older-adult tiers (young-old, middle-old, oldest-old)", ctx:"Geriatric",
+   bands:[
+     {label:"Young-old (65–74)", lo:Y(65), hi:Y(75)},
+     {label:"Middle-old (75–84)", lo:Y(75), hi:Y(85)},
+     {label:"Oldest-old (≥85)", lo:Y(85), hi:INF}],
+   refs:["czaja","flusurv"], gapNote:"Under 65 is not an older-adult tier."},
+  {id:"ger-oldest", name:"Oldest-old detail (WHO standard population tail)", ctx:"Geriatric",
+   bands: yb([85,90,95,100], "≥100"), refs:["whoStd"], gapNote:"Oldest-old detail applies to ages 85 and older only."},
+  {id:"who-std", name:"WHO World Standard Population (2000–2025)", ctx:"WHO",
+   bands: yb([0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100], "≥100"),
+   refs:["whoStd","seerWho"]},
+  {id:"who-flu", name:"WHO influenza surveillance minimum age strata", ctx:"WHO",
+   bands:[
+     {label:"0–<2 years", lo:0, hi:Y(2)},
+     {label:"2–4 years", lo:Y(2), hi:Y(5)},
+     {label:"5–14 years", lo:Y(5), hi:Y(15)},
+     {label:"15–49 years", lo:Y(15), hi:Y(50)},
+     {label:"50–64 years", lo:Y(50), hi:Y(65)},
+     {label:"65+ years", lo:Y(65), hi:INF}],
+   refs:["whoFlu","whoFluAges"]},
+  {id:"who-flu-u2", name:"WHO influenza optional under-2 sub-strata", ctx:"WHO",
+   bands:[
+     {label:"0–<6 months", lo:0, hi:M(6)},
+     {label:"6 months–<1 year", lo:M(6), hi:Y(1)},
+     {label:"1–<2 years", lo:Y(1), hi:Y(2)}],
+   refs:["whoFlu","whoFluAges"], gapNote:"Sub-strata apply to children under 2 only."},
+  {id:"who-life", name:"WHO life-course definitions (overlapping)", ctx:"WHO", overlap:true,
+   bands:[
+     {label:"Neonatal (0–27 days)", lo:0, hi:D(28)},
+     {label:"Infant (<1 year)", lo:0, hi:Y(1)},
+     {label:"Under-five (<5 years)", lo:0, hi:Y(5)},
+     {label:"Adolescent (10–19)", lo:Y(10), hi:Y(20)},
+     {label:"Young people (10–24)", lo:Y(10), hi:Y(25)},
+     {label:"Youth (15–24)", lo:Y(15), hi:Y(25)},
+     {label:"Older person (60+)", lo:Y(60), hi:INF}],
+   refs:["whoGHE","whoAdol","whoAgeing"],
+   gapNote:"No WHO life-course category applies at this age."}
+];
+
+// PHIN VADS unit membership for the unit check
+const UNIT_SETS = {
+  "PHVS_AgeUnit_NND (NNDSS MMG)": {codes:["a","mo","wk","d","UNK"], ref:"vadsUnitNND"},
+  "PHVS_AgeUnit_SyndromicSurveillance": {codes:["a","mo","wk","d","UNK"], ref:"vadsUnitSyS"},
+  "PHVS_AgeUnit_UCUM": {codes:["a","mo","wk","d","h","min","s","UNK","OTH"], ref:"vadsUnit"}
+};
+
+const PER_DAY = {a:365.25, mo:30.4375, wk:7, d:1, h:1/24, min:1/1440, s:1/86400};
+const $ = id => document.getElementById(id);
+let active = new Set();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function ageDays(){
+  const u = $("unit").value, raw = $("age").value.trim();
+  if (u === "UNK" || u === "OTH") return {unknown:true};
+  if (raw === "") return {empty:true};
+  const v = Number(raw);
+  if (!isFinite(v) || v < 0) return {error:"Enter a number 0 or greater."};
+  const d = v * PER_DAY[u];
+  if (d > Y(130)) return {error:"Age exceeds 130 years. Check the value and unit."};
+  return {days:d};
+}
+function describe(d){
+  const y = Math.floor(d/365.25 + 1e-9), mo = Math.floor(d/30.4375 + 1e-9), dd = Math.floor(d + 1e-9);
+  return `Normalized: <strong>${dd.toLocaleString()} days</strong>, ${mo.toLocaleString()} completed months, ${y} completed years`;
+}
+function findBands(s, d){ return s.bands.filter(b => d + 1e-9 >= b.lo && d + 1e-9 < b.hi); }
+
+function unitCheck(){
+  const u = $("unit").value;
+  const missing = Object.entries(UNIT_SETS).filter(([, v]) => !v.codes.includes(u));
+  if (!missing.length){ $("unitcheck").innerHTML = `Unit <strong>${esc(u)}</strong> is valid in PHVS_AgeUnit_NND, PHVS_AgeUnit_SyndromicSurveillance and PHVS_AgeUnit_UCUM.`; return; }
+  $("unitcheck").innerHTML = `<span class="bad">Unit <strong>${esc(u)}</strong> is not in ${missing.map(([n, v]) => `<a href="${REFS[v.ref].url}" target="_blank" rel="noopener noreferrer">${esc(n)}</a>`).join(" or ")}.</span> It may be rejected by that feed.`;
+}
+
+const SCALE_MAX = Y(100);
+const pos = d => Math.sqrt(Math.min(Math.max(d,0), SCALE_MAX) / SCALE_MAX);
+function ruler(s, hits, d){
+  const start = s.bands[0].lo;
+  let html = `<div class="ruler" aria-hidden="true">`;
+  if (start > 0) html += `<div class="seg" style="width:${pos(start)*100}%;background:transparent;border:1px dashed var(--line)"></div>`;
+  s.bands.forEach(b => {
+    const w = (pos(Math.min(b.hi, SCALE_MAX)) - pos(b.lo)) * 100;
+    if (w <= 0) return;
+    html += `<div class="seg${hits.includes(b)?" on":""}" style="width:calc(${w}% - 2px)" title="${esc(b.label)}">${w>6?esc(b.label.replace(/ \(.*\)/,"")):""}</div>`;
+  });
+  if (d !== null) html += `<div class="pin" style="left:${pos(d)*100}%"></div>`;
+  html += `</div><div class="axis" aria-hidden="true">${[0,1,5,18,45,65,100].map(a=>`<span style="left:${pos(Y(a))*100}%">${a}</span>`).join("")}</div>`;
+  return html;
+}
+function cites(s){
+  return `<div class="cites"><span>Sources:</span>${s.refs.map(k => `<a href="${REFS[k].url}" target="_blank" rel="noopener noreferrer" title="${esc(REFS[k].cite)}"><sup>[${refNum(k)}]</sup> ${esc(shortName(k))}</a>`).join("")}</div>`;
+}
+function shortName(k){
+  try { return new URL(REFS[k].url).hostname.replace(/^www\./,""); } catch(e){ return "link"; }
+}
+
+function render(){
+  unitCheck();
+  const a = ageDays(), n = $("normal");
+  let d = null;
+  if (a.error) n.innerHTML = `<span class="err">${a.error}</span>`;
+  else if (a.unknown) n.innerHTML = "Age unknown or other. Every scheme maps to its <strong>Unknown</strong> category.";
+  else if (a.empty) n.textContent = "Enter an age to see mappings.";
+  else { d = a.days; n.innerHTML = describe(d); }
+
+  const shown = SCHEMES.filter(s => active.has(s.id));
+  $("count").textContent = `${shown.length} of ${SCHEMES.length} schemes`;
+  if (!shown.length){ $("list").innerHTML = `<div class="empty">No schemes match. Tick a group, context or scheme in the sidebar.</div>`; return; }
+
+  $("list").classList.toggle("compact", $("compact").checked);
+  $("list").innerHTML = shown.map(s => {
+    const hits = d !== null ? findBands(s, d) : [];
+    let res;
+    if (a.unknown) res = `<span class="result">Unknown</span>`;
+    else if (d === null) res = `<span class="result none">—</span>`;
+    else if (hits.length) res = `<span class="result">${hits.map(h => esc(h.label.replace(/ \(.*\)/,""))).join(" + ")}</span>`;
+    else res = `<span class="result none">Outside scheme</span>`;
+    const gap = d !== null && !hits.length && s.gapNote ? `<div class="note">${esc(s.gapNote)}</div>` : "";
+    const ver = s.verify ? `<div class="note">${esc(s.verify)}</div>` : "";
+    const hasCode = s.bands.some(b => b.code);
+    const rows = s.bands.map(b => `<tr class="${hits.includes(b)?"on":""}"><td>${esc(b.label)}</td>${hasCode?`<td class="code">${esc(b.code||"")}</td>`:""}<td>${fmt(b.lo)}</td><td>${b.hi===INF?"none":fmt(b.hi)}</td></tr>`).join("")
+      + (s.unknownCode ? `<tr><td>Unknown</td><td class="code">${esc(s.unknownCode)}</td><td colspan="2"></td></tr>` : "");
+    const visual = s.overlap
+      ? `<div class="overlap">${s.bands.map(b => `<span class="tag${hits.includes(b)?" on":""}">${esc(b.label)}</span>`).join("")}</div>`
+      : ruler(s, hits, d);
+    return `<article class="scheme">
+      <div class="row1"><div><div class="name">${esc(s.name)}</div><div class="ctx">${esc(s.ctx)}</div></div>${res}</div>
+      ${visual}${gap}${ver}
+      <details><summary>All ${s.bands.length} bands</summary>
+        <div class="bands"><table><thead><tr><th>Band</th>${hasCode?"<th>Code</th>":""}<th>From (inclusive)</th><th>To (exclusive)</th></tr></thead><tbody>${rows}</tbody></table></div>
+      </details>
+      ${cites(s)}
+    </article>`;
+  }).join("");
+}
+function fmt(days){
+  if (days === 0) return "0";
+  const y = days/365.25, m = days/30.4375;
+  if (Math.abs(y - Math.round(y)) < 1e-6) return `${Math.round(y)} y`;
+  if (Math.abs(m - Math.round(m)) < 1e-6) return `${Math.round(m)} mo`;
+  return `${Math.round(days)} d`;
+}
+
+function buildRefs(){
+  $("reflist").innerHTML = REF_KEYS.map(k => `<li id="ref-${k}">${esc(REFS[k].cite)} <a href="${REFS[k].url}" target="_blank" rel="noopener noreferrer">${esc(REFS[k].url)}</a></li>`).join("");
+}
+const GROUPS = [
+  ["Surveillance systems", ["NNDSS","Syndromic (NSSP)","Mortality (NCHS)","Population / Census"]],
+  ["Conditions", ["Respiratory","TB","STI","HIV","Measles","Immunization"]],
+  ["Populations", ["Pediatric","Geriatric","Survey (BRFSS)"]],
+  ["International", ["WHO"]]
+];
+let idsForKeyFn = () => [];
+// Commonly used contexts selected on load
+const DEFAULT_CTX = ["NNDSS","Syndromic (NSSP)","Mortality (NCHS)","Immunization"];
+const idsOf = (list) => SCHEMES.filter(s => list.includes(s.ctx)).map(s => s.id);
+function toggleBtn(key, label, open){
+  return `<button type="button" class="pm" data-toggle="${key}" aria-expanded="${open}" aria-controls="tb-${key}" aria-label="${open ? "Collapse" : "Expand"} ${esc(label)}">${open ? "−" : "+"}</button>`;
+}
+function buildCtx(){
+  let ci = 0;
+  $("ctxgroups").innerHTML = `<ul class="tree" role="tree">` + GROUPS.map(([g, list], gi) => `
+    <li class="t-group g${gi}" role="treeitem" aria-expanded="true">
+      <div class="t-row t-g">
+        ${toggleBtn("g" + gi, g, true)}
+        <label><input type="checkbox" data-level="g" data-key="g${gi}"><span class="t-name">${esc(g)}</span></label>
+        <span class="t-n" id="n-g${gi}"></span>
+      </div>
+      <ul id="tb-g${gi}" role="group">
+        ${list.map(c => { const sch = SCHEMES.filter(s => s.ctx === c);
+          if (sch.length === 1) { const s = sch[0]; return `
+        <li class="t-leaf t-solo" role="treeitem"><div class="t-row t-s"><span class="pm-spacer"></span><label title="${esc(c)}"><input type="checkbox" data-level="s" data-id="${s.id}"><span class="t-name">${esc(s.name)}</span></label><span></span><button type="button" class="link only" data-only="${esc(c)}" aria-label="Show only ${esc(s.name)}">Only</button></div></li>`; }
+          const k = "c" + (ci++); return `
+        <li class="t-ctx" role="treeitem" aria-expanded="false">
+          <div class="t-row t-c">
+            ${toggleBtn(k, c, false)}
+            <label><input type="checkbox" data-level="c" data-key="${k}" data-ctx="${esc(c)}"><span class="t-name">${esc(c)}</span></label>
+            <span class="t-n" id="n-${k}"></span>
+            <button type="button" class="link only" data-only="${esc(c)}" aria-label="Show only ${esc(c)}">Only</button>
+          </div>
+          <ul id="tb-${k}" role="group" hidden>
+            ${sch.map(s => `<li class="t-leaf" role="treeitem"><div class="t-row t-s"><span class="pm-spacer"></span><label><input type="checkbox" data-level="s" data-id="${s.id}"><span class="t-name">${esc(s.name)}</span></label></div></li>`).join("")}
+          </ul>
+        </li>`; }).join("")}
+      </ul>
+    </li>`).join("") + `</ul>`;
+
+  const ctxKeys = {}; document.querySelectorAll('input[data-level="c"]').forEach(i => ctxKeys[i.dataset.key] = i.dataset.ctx);
+  const idsForKey = key => key[0] === "g" ? idsOf(GROUPS[+key.slice(1)][1]) : idsOf([ctxKeys[key]]);
+
+  $("ctxgroups").addEventListener("change", e => {
+    const t = e.target, ds = t.dataset || {};
+    if (ds.level === "s") t.checked ? active.add(ds.id) : active.delete(ds.id);
+    else if (ds.level) idsForKey(ds.key).forEach(id => t.checked ? active.add(id) : active.delete(id));
+    else return;
+    syncCtx(); render();
+  });
+  $("ctxgroups").addEventListener("click", e => {
+    const t = e.target.closest("[data-only],[data-toggle]"); if (!t) return;
+    if (t.dataset.only){ e.preventDefault(); active = new Set(idsOf([t.dataset.only])); syncCtx(); render(); }
+    else setOpen(t.dataset.toggle, $("tb-" + t.dataset.toggle).hidden);
+  });
+  $("ctxAll").onclick = () => { active = new Set(SCHEMES.map(s => s.id)); syncCtx(); render(); };
+  $("ctxNone").onclick = () => { active = new Set(); syncCtx(); render(); };
+  $("ctxExpand").onclick = () => document.querySelectorAll("[data-toggle]").forEach(b => setOpen(b.dataset.toggle, true));
+  $("ctxCollapse").onclick = () => document.querySelectorAll("[data-toggle]").forEach(b => setOpen(b.dataset.toggle, false));
+  idsForKeyFn = idsForKey;
+  $("ctxDefault").onclick = () => { active = new Set(idsOf(DEFAULT_CTX)); syncCtx(); render(); };
+  active = new Set(idsOf(DEFAULT_CTX)); syncCtx();
+}
+function setOpen(key, open){
+  $("tb-" + key).hidden = !open;
+  const b = document.querySelector(`[data-toggle="${key}"]`);
+  b.textContent = open ? "−" : "+";
+  b.setAttribute("aria-expanded", String(open));
+  b.setAttribute("aria-label", b.getAttribute("aria-label").replace(/^(Collapse|Expand)/, open ? "Collapse" : "Expand"));
+  b.closest("li").setAttribute("aria-expanded", String(open));
+}
+function syncCtx(){
+  document.querySelectorAll('input[data-level="s"]').forEach(i => { i.checked = active.has(i.dataset.id); });
+  document.querySelectorAll('input[data-level="g"],input[data-level="c"]').forEach(i => {
+    const ids = idsForKeyFn(i.dataset.key), n = ids.filter(id => active.has(id)).length;
+    i.checked = n === ids.length; i.indeterminate = n > 0 && n < ids.length;
+    $("n-" + i.dataset.key).textContent = `${n}/${ids.length}`;
+  });
+  $("ctxsum").textContent = active.size === SCHEMES.length ? "All" : `${active.size} of ${SCHEMES.length} schemes`;
+}
+
+// ---------- Export: CSV, Excel, Print ----------
+const GROUP_OF = Object.fromEntries(GROUPS.flatMap(([g, cs]) => cs.map(c => [c, g])));
+function exportRows(){
+  const a = ageDays(), age = $("age").value, unit = $("unit").value;
+  return SCHEMES.filter(s => active.has(s.id)).map(s => {
+    let band = "", code = "";
+    if (a.unknown || a.empty || a.error){ band = "Unknown"; code = "UNK"; }
+    else {
+      const h = findBands(s, a.days);
+      band = h.length ? h.map(x => x.label).join("; ") : "Outside scheme";
+      code = h.map(ivCode).join("; ");
+    }
+    const r = REFS[s.refs[0]];
+    return {input_age: age, input_unit: unit, age_days: a.days !== undefined ? Math.round(a.days * 100) / 100 : "",
+      group: GROUP_OF[s.ctx] || "", context: s.ctx, scheme: s.name, mapped_band: band, band_code: code,
+      verify_note: s.verify || "", source_citation: r.cite, source_url: r.url, crosswalk_version: VERSION};
+  });
+}
+// Interval code, same notation as the crosswalk package: [1a,5a) = at least 1 and under 5 completed years
+function natural(days){
+  if (days === INF) return "*";
+  for (const [u, f] of [["a", 365.25], ["mo", 30.4375], ["d", 1]]){ const v = days / f; if (Math.abs(v - Math.round(v)) < 1e-9) return Math.round(v) + u; }
+  return days + "d";
+}
+function ivCode(b){ return b.code || `[${natural(b.lo)},${natural(b.hi)})`; }
+const COLS = ["input_age","input_unit","age_days","group","context","scheme","mapped_band","band_code","verify_note","source_citation","source_url","crosswalk_version"];
+function fileBase(){
+  const v = ($("age").value || "unknown").replace(/[^0-9.]/g, "") || "unknown";
+  return `age-group-mapping_${v}${$("unit").value}_${VERSION.match(/v[\d.]+/)[0]}`;
+}
+function toCsv(rows){
+  const q = v => `"${String(v).replace(/"/g, '""')}"`;
+  return "\uFEFF" + [COLS.join(","), ...rows.map(r => COLS.map(c => q(r[c])).join(","))].join("\r\n") + "\r\n";
+}
+
+// Minimal XLSX writer (stored ZIP + SpreadsheetML), no library, works offline.
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8){ let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_T[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zip(files){
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  for (const [name, text] of files){
+    const nm = enc.encode(name), data = enc.encode(text), crc = crc32(data);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+    h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, nm.length, true);
+    parts.push(new Uint8Array(h.buffer), nm, data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+    c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, nm.length, true);
+    c.setUint32(42, off, true);
+    central.push(new Uint8Array(c.buffer), nm);
+    off += 30 + nm.length + data.length;
+  }
+  const csize = central.reduce((n, p) => n + p.length, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+  e.setUint32(12, csize, true); e.setUint32(16, off, true);
+  const all = [...parts, ...central, new Uint8Array(e.buffer)], out = new Uint8Array(all.reduce((n, p) => n + p.length, 0));
+  let p = 0; for (const a of all){ out.set(a, p); p += a.length; } return out;
+}
+const xesc = v => String(v).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+function colName(i){ let s = ""; i++; while (i){ const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+function sheetXml(rows, widths){
+  const cell = (v, r, c, st) => (typeof v === "number" && isFinite(v))
+    ? `<c r="${colName(c)}${r}"${st ? ` s="${st}"` : ""}><v>${v}</v></c>`
+    : `<c r="${colName(c)}${r}" t="inlineStr"${st ? ` s="${st}"` : ""}><is><t xml:space="preserve">${xesc(v)}</t></is></c>`;
+  const body = rows.map((row, ri) => `<row r="${ri + 1}">${row.map((v, ci) => v === "" || v === null || v === undefined ? "" : cell(v, ri + 1, ci, ri === 0 ? 1 : 0)).join("")}</row>`).join("");
+  const cols = widths ? `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>` : "";
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>${cols}<sheetData>${body}</sheetData></worksheet>`;
+}
+function toXlsx(rows){
+  const a = ageDays();
+  const data = [COLS, ...rows.map(r => COLS.map(c => c === "age_days" && r[c] !== "" ? Number(r[c]) : r[c]))];
+  const about = [["Field", "Value"], ["App", "Age Group Mapper"], ["Crosswalk version", VERSION], ["Input age", $("age").value], ["Input unit", $("unit").value],
+    ["Age in days", a.days !== undefined ? Math.round(a.days * 100) / 100 : "Unknown"], ["Schemes exported", rows.length],
+    ["Rule", "Age normalized to days (1 year = 365.25 d, 1 month = 30.4375 d). Lower bound inclusive, upper bound exclusive."],
+    ["Unknown", "Blank age, UNK or OTH, or a negative age maps to Unknown. A known age outside every band maps to Outside scheme."],
+    ["Exported", new Date().toISOString().slice(0, 19).replace("T", " ") + " UTC"]];
+  const ct = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
+  const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+  const wb = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Mappings" sheetId="1" r:id="rId1"/><sheet name="About" sheetId="2" r:id="rId2"/></sheets></workbook>`;
+  const wbr = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+  const st = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDCE3EA"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  return zip([["[Content_Types].xml", ct], ["_rels/.rels", rels], ["xl/workbook.xml", wb], ["xl/_rels/workbook.xml.rels", wbr], ["xl/styles.xml", st],
+    ["xl/worksheets/sheet1.xml", sheetXml(data, [10, 10, 11, 20, 18, 44, 26, 16, 40, 60, 50, 26])], ["xl/worksheets/sheet2.xml", sheetXml(about, [20, 100])]]);
+}
+
+// Save: claude.ai viewer capability when present, plain browser download elsewhere (GitHub Pages, local file).
+async function saveFile(filename, data, mime){
+  const blob = new Blob([data], {type: mime});
+  if (window.claude && typeof window.claude.use === "function"){
+    let dl = null;
+    try { dl = await window.claude.use("downloads"); } catch(e){ dl = null; }
+    if (dl){
+      try { await dl.save({filename, data: blob}); toast(`Saved ${filename}`); }
+      catch(e){ toast(e && e.code === "declined" ? "Download cancelled" : "Download unavailable here"); }
+      return;
+    }
+  }
+  try {
+    const url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    toast(`Downloading ${filename}`);
+  } catch(e){ toast("Download blocked by the browser"); }
+}
+function doPrint(){
+  const rows = exportRows(), a = ageDays();
+  const ageTxt = a.days !== undefined ? `${$("age").value} ${$("unit").value} (${Math.floor(a.days + 1e-9).toLocaleString()} days)` : "Unknown";
+  $("printout").innerHTML = `<h1>Age Group Mapper</h1>
+    <p class="meta">Age: <strong>${esc(ageTxt)}</strong> &nbsp;|&nbsp; ${rows.length} schemes &nbsp;|&nbsp; ${esc(VERSION)} &nbsp;|&nbsp; Printed ${new Date().toLocaleDateString()}</p>
+    <table><thead><tr><th>Group</th><th>Context</th><th>Scheme</th><th>Age group</th><th>Note</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td>${esc(r.group)}</td><td>${esc(r.context)}</td><td>${esc(r.scheme)}</td><td><strong>${esc(r.mapped_band)}</strong></td><td>${esc(r.verify_note)}</td></tr>`).join("")}
+    </tbody></table>
+    <div class="src">Rule: lower bound inclusive, upper bound exclusive; 1 year = 365.25 days. Sources: ${[...new Set(rows.map(r => r.source_url))].map(esc).join(" · ")}</div>`;
+  try { window.print(); } catch(e){ toast("Printing is blocked here. Open the app in its own tab to print."); }
+}
+function guardEmpty(){ if (!active.size){ toast("Select at least one scheme first"); return true; } return false; }
+
+let tt;
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(()=>t.classList.remove("show"), 1800); }
+
+$("ver").textContent = VERSION;
+buildCtx(); buildRefs();
+function setCH(){ document.documentElement.style.setProperty("--ch", $("console").offsetHeight + "px"); }
+setCH(); window.addEventListener("resize", setCH);
+$("refcount").textContent = `${REF_KEYS.length} sources`;
+["age","unit"].forEach(id => $(id).addEventListener("input", render));
+$("unit").addEventListener("change", () => { $("age").disabled = ["UNK","OTH"].includes($("unit").value); render(); });
+$("dlCsv").addEventListener("click", () => { if (guardEmpty()) return; saveFile(fileBase() + ".csv", toCsv(exportRows()), "text/csv;charset=utf-8"); });
+$("dlXlsx").addEventListener("click", () => { if (guardEmpty()) return; saveFile(fileBase() + ".xlsx", toXlsx(exportRows()), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); });
+$("doPrint").addEventListener("click", () => { if (guardEmpty()) return; doPrint(); });
+const narrow = window.matchMedia && window.matchMedia("(max-width:860px)").matches;
+$("compact").checked = narrow;
+$("ctxpanel").open = !narrow;
+$("ctxpanel").querySelector("summary").addEventListener("click", e => { if (!(window.matchMedia && window.matchMedia("(max-width:860px)").matches)) e.preventDefault(); });
+$("compact").addEventListener("change", render);
+render();
+</script>
+
+</body>
+</html>
